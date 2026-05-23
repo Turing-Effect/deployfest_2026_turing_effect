@@ -18,13 +18,22 @@ app = FastAPI(
 )
 
 # Configure CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+if "*" in allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # In-memory thread storage for tracking simulated runs and fallback state
 active_threads = {}
@@ -73,7 +82,7 @@ def start_analysis_endpoint(payload: StartAnalysisPayload):
         from agent import start_analysis
         # Call agent function if it is present and executable
         if callable(start_analysis):
-            result = start_analysis(payload.dict())
+            result = start_analysis(payload.model_dump())
             return result
     except (ImportError, AttributeError, TypeError):
         pass
@@ -122,7 +131,7 @@ def start_analysis_endpoint(payload: StartAnalysisPayload):
             "locality_insights": insights,
             "roi_metrics": roi,
             "rag_context": rag_context,
-            "input_parameters": payload.dict(),
+            "input_parameters": payload.model_dump(),
             "scores": {
                 "preliminary_score": prelim_score,
                 "final_score": None
@@ -138,7 +147,7 @@ def start_analysis_endpoint(payload: StartAnalysisPayload):
             "locality_insights": {},
             "roi_metrics": {},
             "rag_context": "Error preparing analysis context.",
-            "input_parameters": payload.dict(),
+            "input_parameters": payload.model_dump(),
             "scores": {
                 "preliminary_score": 50,
                 "final_score": None
@@ -180,9 +189,9 @@ async def resume_analysis_endpoint(payload: ResumeAnalysisPayload):
         if callable(resume_analysis):
             # Await the execution of resume_analysis if it is async
             if asyncio.iscoroutinefunction(resume_analysis):
-                result = await resume_analysis(payload.dict())
+                result = await resume_analysis(payload.model_dump())
             else:
-                result = resume_analysis(payload.dict())
+                result = resume_analysis(payload.model_dump())
             return result
     except (ImportError, AttributeError, TypeError):
         pass
