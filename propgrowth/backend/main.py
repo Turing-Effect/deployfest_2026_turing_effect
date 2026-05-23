@@ -46,6 +46,11 @@ class ResumeAnalysisPayload(BaseModel):
 @app.on_event("startup")
 def startup_event():
     try:
+        from telemetry import initialize_telemetry
+        initialize_telemetry()
+    except Exception as e:
+        print(f"Error initializing telemetry at startup: {e}")
+    try:
         initialize_rag()
     except Exception as e:
         print(f"Error initializing RAG at startup: {e}")

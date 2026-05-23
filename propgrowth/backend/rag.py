@@ -1,4 +1,5 @@
 import os
+import time
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
@@ -69,10 +70,18 @@ def query_rag_context(query: str, n_results: int = 3) -> str:
     Queries ChromaDB and returns the formatted grounding context or fallback message.
     """
     global collection
+    start_time = time.perf_counter()
     if collection is None:
         try:
             initialize_rag()
         except Exception:
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            try:
+                import telemetry
+                if hasattr(telemetry, "log_rag_retrieval") and callable(telemetry.log_rag_retrieval):
+                    telemetry.log_rag_retrieval(query, 0, "", latency_ms)
+            except Exception:
+                pass
             return "No specific zoning or infrastructure data found for this query."
             
     try:
@@ -84,10 +93,25 @@ def query_rag_context(query: str, n_results: int = 3) -> str:
         docs = results.get("documents", [])
         if docs and len(docs[0]) > 0:
             flattened = docs[0]
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            try:
+                import telemetry
+                if hasattr(telemetry, "log_rag_retrieval") and callable(telemetry.log_rag_retrieval):
+                    top_preview = flattened[0][:120] if len(flattened) > 0 else ""
+                    telemetry.log_rag_retrieval(query, len(flattened), top_preview, latency_ms)
+            except Exception:
+                pass
             return "GROUNDING CONTEXT:\n" + "\n---\n".join(flattened)
     except Exception:
         pass
         
+    latency_ms = int((time.perf_counter() - start_time) * 1000)
+    try:
+        import telemetry
+        if hasattr(telemetry, "log_rag_retrieval") and callable(telemetry.log_rag_retrieval):
+            telemetry.log_rag_retrieval(query, 0, "", latency_ms)
+    except Exception:
+        pass
     return "No specific zoning or infrastructure data found for this query."
 
 # Attempt automatic initialization on execution/import

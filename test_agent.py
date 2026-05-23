@@ -3,7 +3,7 @@ import os
 import asyncio
 
 # Add backend directory to sys.path to enable local imports during test run
-backend_dir = r"c:\Users\akhil\python_projects\deploy-fest\deployfest_2026_turing_effect\propgrowth\backend"
+backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "propgrowth", "backend")
 sys.path.insert(0, backend_dir)
 
 from rag import initialize_rag
@@ -66,6 +66,12 @@ async def test_pipeline():
     if thread_id in main.active_threads:
         print("Thread status in main:", main.active_threads[thread_id]["status"])
         print("Thread final report verdict in main:", main.active_threads[thread_id]["report"].get("report", {}).get("growth_verdict"))
+
+    print("\n--- 5. Telemetry Summary Check ---")
+    import telemetry
+    import json
+    print("Telemetry summary details:")
+    print(json.dumps(telemetry.get_telemetry_summary(), indent=2))
 
 if __name__ == "__main__":
     asyncio.run(test_pipeline())
